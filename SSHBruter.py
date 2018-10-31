@@ -168,7 +168,7 @@ def trySocket(host, port, tried=0):
     print "Testing host: " + host + ":" + str(port)
     sock = socket.socket()
     try:
-        sock.settimeout(10)
+        sock.settimeout(3)
         sock.connect((host, port))
         sock.close()
     except socket.error:
@@ -184,7 +184,7 @@ def trySocket(host, port, tried=0):
             return sshAuth(host,port,username, tried)
         else:
             print '[-] Failed to negotiate SSH transport. Trying next user.' 
-            return False
+            return False, False
     global authcheck
     if args.testcreds:
         host, port, authcheck = checkauthtype(host, port)
@@ -207,6 +207,7 @@ arg_parser = argparse.ArgumentParser(
              Its a lot of crappy code. But It works fairly well and I feel good about this tool.\n
              New Additions:
                 Added a check that verifies the SSH server accepts 'password' authentication and disables testcred if the server doesn't and is selected by user.
+                Added timeout for SSH server thats not responding.
              
          '''))
 
@@ -307,6 +308,8 @@ def run_line():
                             pool = multiprocessing.Pool(args.threads)
                             results = pool.map(checkUsername, runArray)
                             print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                        else:
+                            continue
                     else:
                         print "File is in wrong format. Should be IP:port on separate lines"
         elif args.userList: #username list passed in
@@ -343,25 +346,28 @@ def run_line():
                     if ":" in lines:
                         host = lines.split(':')
                         host, port = trySocket(host[0],int(host[1].strip()))
-                        try :                   
-                            if args.userList == "small":
-                                f2 = open("small")
-                            if args.userList == "medium":
-                                f2 = open("medium")
-                            if args.userList == "large":
-                                f2 = open("large")
-                        except IOError:
-                            print "[-] File doesn't exist or is unreadable."
-                            sys.exit(3)
-                            
-                        runArray = []
-                        for temp in f2.readlines():
-                            runArray.append([host,port,temp.strip()])
-                            
-                        f2.close()
-                        pool = multiprocessing.Pool(args.threads)
-                        results = pool.map(checkUsername, runArray)
-                        print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                        if host != False:
+                            try :                   
+                                if args.userList == "small":
+                                    f2 = open("small")
+                                if args.userList == "medium":
+                                    f2 = open("medium")
+                                if args.userList == "large":
+                                    f2 = open("large")
+                            except IOError:
+                                print "[-] File doesn't exist or is unreadable."
+                                sys.exit(3)
+                                
+                            runArray = []
+                            for temp in f2.readlines():
+                                runArray.append([host,port,temp.strip()])
+                                
+                            f2.close()
+                            pool = multiprocessing.Pool(args.threads)
+                            results = pool.map(checkUsername, runArray)
+                            print "Running time - Host: " + host + " done in " + str(datetime.now() - startTime) + "\n"
+                        else:
+                            continue
                     else:
                         print "File is in wrong format. Should be IP:port on separate lines"
         else: # no usernames passed in
